@@ -120,7 +120,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.ActionBar;
-import androidx.core.content.ContextCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.FragmentActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -1301,16 +1300,6 @@ public class OCFileListFragment extends ExtendedListFragment implements
     public void sortFiles(FileSortOrder sortOrder) {
         mSortButton.setText(DisplayUtils.getSortOrderStringId(sortOrder));
         mAdapter.setSortOrder(mFile, sortOrder);
-    }
-
-    private void setGridSwitchButton() {
-        if (isGridEnabled()) {
-            mSwitchGridViewButton.setContentDescription(getString(R.string.action_switch_list_view));
-            mSwitchGridViewButton.setIcon(ContextCompat.getDrawable(requireContext(), R.drawable.ic_view_list));
-        } else {
-            mSwitchGridViewButton.setContentDescription(getString(R.string.action_switch_grid_view));
-            mSwitchGridViewButton.setIcon(ContextCompat.getDrawable(requireContext(), R.drawable.ic_view_module));
-        }
     }
 
     /**

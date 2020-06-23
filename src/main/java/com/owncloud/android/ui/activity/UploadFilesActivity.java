@@ -51,7 +51,6 @@ import com.owncloud.android.ui.dialog.LocalStoragePathPickerDialogFragment;
 import com.owncloud.android.ui.dialog.SortingOrderDialogFragment;
 import com.owncloud.android.ui.fragment.ExtendedListFragment;
 import com.owncloud.android.ui.fragment.LocalFileListFragment;
-import com.owncloud.android.utils.DisplayUtils;
 import com.owncloud.android.utils.FileSortOrder;
 import com.owncloud.android.utils.ThemeUtils;
 
@@ -64,13 +63,10 @@ import javax.inject.Inject;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.SearchView;
-import androidx.core.content.res.ResourcesCompat;
 import androidx.core.view.MenuItemCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
-
-import static com.owncloud.android.utils.DisplayUtils.openSortingOrderDialogFragment;
 
 /**
  * Displays local files and let the user choose what of them wants to upload to the current ownCloud account.
@@ -107,7 +103,6 @@ public class UploadFilesActivity extends FileActivity implements LocalFileListFr
     private Menu mOptionsMenu;
     private SearchView mSearchView;
     private Spinner mBehaviourSpinner;
-    private MaterialButton sortButton;
 
     /**
      * Helper to launch the UploadFilesActivity for which you would like a result when it finished. Your
@@ -170,7 +165,7 @@ public class UploadFilesActivity extends FileActivity implements LocalFileListFr
             ((MaterialButton) findViewById(R.id.upload_files_btn_upload)).setText(R.string.uploader_btn_alternative_text);
         }
 
-        mFileListFragment = (LocalFileListFragment) getSupportFragmentManager().findFragmentById(R.id.local_files_list);
+        mFileListFragment = (LocalFileListFragment) getSupportFragmentManager().findFragmentByTag("local_files_list");
 
         // Set input controllers
         MaterialButton cancelButton = findViewById(R.id.upload_files_btn_cancel);
@@ -182,27 +177,6 @@ public class UploadFilesActivity extends FileActivity implements LocalFileListFr
         uploadButton.setBackgroundTintList(ColorStateList.valueOf(ThemeUtils.primaryColor(this, true)));
         uploadButton.setTextColor(ThemeUtils.fontColor(this, false));
         uploadButton.setOnClickListener(this);
-
-        sortButton = findViewById(R.id.sort_button);
-        FileSortOrder fileSortOrder = preferences.getSortOrderByType(FileSortOrder.Type.uploadFilesView);
-        sortButton.setText(DisplayUtils.getSortOrderStringId(fileSortOrder));
-        sortButton.setOnClickListener(l -> openSortingOrderDialogFragment(getSupportFragmentManager(), fileSortOrder));
-
-        MaterialButton switchButton = findViewById(R.id.switch_grid_view_button);
-        switchButton.setOnClickListener(l -> {
-            if (isGridView()) {
-                switchButton.setIcon(ResourcesCompat.getDrawable(getResources(),
-                                                                 R.drawable.ic_view_module,
-                                                                 null));
-                mFileListFragment.switchToListView();
-            } else {
-                switchButton.setIcon(ResourcesCompat.getDrawable(getResources(),
-                                                                 R.drawable.ic_view_list,
-                                                                 null));
-                mFileListFragment.switchToGridView();
-
-            }
-        });
 
         int localBehaviour = preferences.getUploaderBehaviour();
 
@@ -341,7 +315,6 @@ public class UploadFilesActivity extends FileActivity implements LocalFileListFr
     @Override
     public void onSortingOrderChosen(FileSortOrder selection) {
         preferences.setSortOrder(FileSortOrder.Type.uploadFilesView, selection);
-        sortButton.setText(DisplayUtils.getSortOrderStringId(selection));
         mFileListFragment.sortFiles(selection);
     }
 
