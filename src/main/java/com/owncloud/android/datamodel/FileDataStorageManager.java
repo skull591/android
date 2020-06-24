@@ -1740,13 +1740,13 @@ public class FileDataStorageManager {
             ContentResolver contentResolver = MainApp.getAppContext().getContentResolver();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 if (file != null) {
-                    //values.put(MediaStore.Images.Media.MIME_TYPE, file.getMimeType());
-                    values.put(MediaStore.Images.Media.TITLE, file.getFileName());
-                    values.put(MediaStore.Images.Media.DISPLAY_NAME, file.getFileName());
+                    values.put(MediaStore.Downloads.MIME_TYPE, file.getMimeType());
+                    values.put(MediaStore.Downloads.TITLE, file.getFileName());
+                    values.put(MediaStore.Downloads.DISPLAY_NAME, file.getFileName());
                 }
-                values.put(MediaStore.Images.Media.DATE_ADDED, System.currentTimeMillis() / 1000);
-                values.put(MediaStore.Images.Media.RELATIVE_PATH, path.replace("/sdcard/", "")); // TODO dynamic
-                values.put(MediaStore.Images.Media.IS_PENDING, 0);
+                values.put(MediaStore.Downloads.DATE_ADDED, System.currentTimeMillis() / 1000);
+                values.put(MediaStore.Downloads.RELATIVE_PATH, path.replace("/sdcard/", "")); // TODO dynamic
+                values.put(MediaStore.Downloads.IS_PENDING, 0);
                 try {
                     contentResolver.insert(MediaStore.Downloads.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY),
                                            values);
