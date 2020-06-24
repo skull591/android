@@ -395,8 +395,7 @@ public class ExtendedListFragment extends Fragment implements
         mSwitchGridViewButton = v.findViewById(R.id.switch_grid_view_button);
 
         mFabMain = v.findViewById(R.id.fab_main);
-        ThemeUtils.tintFloatingActionButton(mFabMain, requireContext());
-        ThemeUtils.drawableFloatingActionButton(mFabMain, R.drawable.ic_plus, requireContext());
+        ThemeUtils.colorFloatingActionButton(mFabMain, R.drawable.ic_plus, requireContext());
 
         return v;
     }
@@ -597,7 +596,7 @@ public class ExtendedListFragment extends Fragment implements
             getActivity().runOnUiThread(() -> {
                 if (visible) {
                     mFabMain.show();
-                    ThemeUtils.tintFloatingActionButton(mFabMain, requireContext());
+                    ThemeUtils.colorFloatingActionButton(mFabMain, requireContext());
                 } else {
                     mFabMain.hide();
                 }
@@ -642,11 +641,10 @@ public class ExtendedListFragment extends Fragment implements
             getActivity().runOnUiThread(() -> {
                 if (enabled) {
                     mFabMain.setEnabled(true);
-                    ThemeUtils.tintFloatingActionButton(mFabMain, requireContext());
+                    ThemeUtils.colorFloatingActionButton(mFabMain, requireContext());
                 } else {
                     mFabMain.setEnabled(false);
-                    mFabMain.setBackgroundTintList(ColorStateList.valueOf(Color.GRAY));
-                    mFabMain.setRippleColor(Color.GRAY);
+                    ThemeUtils.colorFloatingActionButton(mFabMain, requireContext(), Color.GRAY);
                 }
             });
         }
