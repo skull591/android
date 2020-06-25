@@ -39,7 +39,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import com.google.android.material.snackbar.Snackbar;
@@ -57,6 +56,8 @@ import com.owncloud.android.lib.resources.shares.ShareType;
 import com.owncloud.android.lib.resources.status.OCCapability;
 import com.owncloud.android.ui.activity.FileActivity;
 import com.owncloud.android.ui.activity.FileDisplayActivity;
+import com.owncloud.android.ui.adapter.PublicShareInterface;
+import com.owncloud.android.ui.adapter.PublicShareListAdapter;
 import com.owncloud.android.ui.adapter.ShareeListAdapter;
 import com.owncloud.android.ui.decoration.SimpleListItemDividerDecoration;
 import com.owncloud.android.ui.dialog.ExpirationDatePickerDialogFragment;
@@ -75,7 +76,7 @@ import javax.inject.Inject;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.widget.AppCompatCheckBox;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.SearchView;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -86,7 +87,9 @@ import butterknife.OnClick;
 import butterknife.Unbinder;
 
 public class FileDetailSharingFragment extends Fragment implements ShareeListAdapter.ShareeListAdapterListener,
-    DisplayUtils.AvatarGenerationListener, Injectable {
+    DisplayUtils.AvatarGenerationListener,
+    PublicShareInterface,
+    Injectable {
 
     private static final String ARG_FILE = "FILE";
     private static final String ARG_ACCOUNT = "ACCOUNT";
@@ -97,7 +100,6 @@ public class FileDetailSharingFragment extends Fragment implements ShareeListAda
     private OCFile file;
     private Account account;
     private OCCapability capabilities;
-    private OCShare publicShare;
 
     private FileOperationsHelper fileOperationsHelper;
     private FileActivity fileActivity;
@@ -111,23 +113,14 @@ public class FileDetailSharingFragment extends Fragment implements ShareeListAda
     @BindView(R.id.shareUsersList)
     RecyclerView usersList;
 
+    @BindView(R.id.publicShareList)
+    RecyclerView publicShareList;
+
+    @BindView(R.id.new_public_share)
+    View addPublicShare;
+
     @BindView(R.id.shareNoUsers)
     TextView noList;
-
-    @BindView(R.id.share_by_link)
-    AppCompatCheckBox shareByLink;
-
-    @BindView(R.id.share_link_copy_icon)
-    ImageView shareLinkCopyIcon;
-
-    @BindView(R.id.overflow_menu_share_link)
-    ImageView overflowMenuShareLink;
-
-    @BindView(R.id.share_by_link_allow_editing)
-    AppCompatCheckBox shareByLinkAllowEditing;
-
-    @BindView(R.id.share_by_link_container)
-    LinearLayout shareByLinkContainer;
 
     @BindView(R.id.shared_with_you_container)
     LinearLayout sharedWithYouContainer;
@@ -240,7 +233,6 @@ public class FileDetailSharingFragment extends Fragment implements ShareeListAda
         setShareWithYou();
 
         if (file.canReshare()) {
-            setShareByLinkInfo(file.isSharedViaLink());
             setShareWithUserInfo();
             FileDetailSharingFragmentHelper.setupSearchView(
                 (SearchManager) fileActivity.getSystemService(Context.SEARCH_SERVICE), searchView,
@@ -248,48 +240,8 @@ public class FileDetailSharingFragment extends Fragment implements ShareeListAda
             ThemeUtils.themeSearchView(searchView, requireContext());
         } else {
             searchView.setVisibility(View.GONE);
-            shareByLinkContainer.setVisibility(View.GONE);
             noList.setText(R.string.reshare_not_allowed);
         }
-    }
-
-    /**
-     * Updates Share by link UI
-     *
-     * @param isShareByLink flag is share by link is enable
-     */
-    public void setShareByLinkInfo(boolean isShareByLink) {
-        shareByLink.setChecked(isShareByLink);
-        if (isShareByLink) {
-            shareLinkCopyIcon.setVisibility(View.VISIBLE);
-        } else {
-            shareLinkCopyIcon.setVisibility(View.INVISIBLE);
-        }
-        int accentColor = ThemeUtils.primaryAccentColor(getContext());
-        ThemeUtils.tintCheckbox(shareByLink, accentColor);
-        ThemeUtils.tintCheckbox(shareByLinkAllowEditing, accentColor);
-        setLinkDetailVisible(isShareByLink);
-    }
-
-    private void setLinkDetailVisible(boolean visible) {
-        if (visible) {
-                shareByLinkAllowEditing.setVisibility(View.VISIBLE);
-            overflowMenuShareLink.setVisibility(View.VISIBLE);
-        } else {
-            shareByLinkAllowEditing.setVisibility(View.INVISIBLE);
-            overflowMenuShareLink.setVisibility(View.INVISIBLE);
-        }
-    }
-
-    /**
-     * Update Share With data
-     */
-    public void setShareWithUserInfo() {
-        // Get Users and Groups
-        shares = fileDataStorageManager.getSharesWithForAFile(file.getRemotePath(), account.name);
-
-        // Update list of users/groups
-        updateListOfUserGroups();
     }
 
     private void setShareWithYou() {
@@ -316,9 +268,9 @@ public class FileDetailSharingFragment extends Fragment implements ShareeListAda
         }
     }
 
-    private void updateListOfUserGroups() {
+    private void setShareWithUserInfo() {
         // TODO Refactoring: create a new {@link ShareUserListAdapter} instance with every call should not be needed
-
+        shares = fileDataStorageManager.getSharesWithForAFile(file.getRemotePath(), account.name);
         if (shares.size() > 0) {
             AccountManager accountManager = AccountManager.get(getContext());
             String userId = accountManager.getUserData(account,
@@ -338,15 +290,6 @@ public class FileDetailSharingFragment extends Fragment implements ShareeListAda
         } else {
             usersList.setVisibility(View.GONE);
             noList.setVisibility(View.VISIBLE);
-        }
-    }
-
-    @OnClick(R.id.share_by_link)
-    public void toggleShareByLink() {
-        if (shareByLink.isChecked()) {
-            createShareLink();
-        } else {
-            fileOperationsHelper.unshareFileViaLink(file);
         }
     }
 
@@ -389,8 +332,7 @@ public class FileDetailSharingFragment extends Fragment implements ShareeListAda
         }
     }
 
-    @OnClick({R.id.share_link_copy_icon})
-    public void copyLinkToClipboard() {
+    public void copyLink(OCShare share) {
         if (file.isSharedViaLink()) {
             if (TextUtils.isEmpty(file.getPublicLink())) {
                 fileOperationsHelper.getFileWithLink(file);
@@ -400,55 +342,55 @@ public class FileDetailSharingFragment extends Fragment implements ShareeListAda
         }
     }
 
-    @OnClick(R.id.share_by_link_allow_editing)
-    public void toggleShareLinkAllowEditing() {
-        if (file.isSharedViaLink()) {
-            fileOperationsHelper.setUploadPermissionsToShare(file, shareByLinkAllowEditing.isChecked());
-        }
-    }
-
-    @OnClick(R.id.overflow_menu_share_link)
-    public void showLinkOverflowMenu() {
-        Context context = getContext();
-        if (context != null && ThemeUtils.themingEnabled(context)) {
+    public void showLinkOverflowMenu(OCShare publicShare, ImageView overflowMenuShareLink) {
+        if (ThemeUtils.themingEnabled(requireContext())) {
             // use grey as fallback for elements where custom theming is not available
-            context.getTheme().applyStyle(R.style.FallbackThemingTheme, true);
-        } else {
-            context = getActivity();
+            requireContext().getTheme().applyStyle(R.style.FallbackThemingTheme, true);
         }
 
-        PopupMenu popup = new PopupMenu(context, overflowMenuShareLink);
+        PopupMenu popup = new PopupMenu(requireContext(), overflowMenuShareLink);
         popup.inflate(R.menu.fragment_file_detail_sharing_link);
-        prepareOptionsMenu(popup.getMenu());
-        popup.setOnMenuItemClickListener(this::optionsItemSelected);
+        prepareOptionsMenu(popup.getMenu(), publicShare);
+        popup.setOnMenuItemClickListener(menuItem -> optionsItemSelected(menuItem, publicShare));
         popup.show();
     }
 
-    private void prepareOptionsMenu(Menu menu) {
-        Resources res = getResources();
-        SharingMenuHelper.setupHideFileListingMenuItem(
-                menu.findItem(R.id.action_hide_file_listing),
-                file.isFolder(),
-                shareByLinkAllowEditing.isChecked(),
-                publicShare.getPermissions()
-        );
+    private void prepareOptionsMenu(Menu menu, OCShare publicShare) {
+        Resources res = requireContext().getResources();
+        SharingMenuHelper.setupHideFileListingMenuItem(menu.findItem(R.id.action_hide_file_listing),
+                                                       file.isFolder(),
+                                                       menu.findItem(R.id.action_allow_editing).isChecked(),
+                                                       publicShare.getPermissions());
+
         SharingMenuHelper.setupHideFileDownload(menu.findItem(R.id.action_hide_file_download),
-            publicShare.isHideFileDownload(), capabilities);
-        SharingMenuHelper.setupPasswordMenuItem(
-                menu.findItem(R.id.action_password),
-                publicShare.isPasswordProtected()
-        );
-        SharingMenuHelper.setupExpirationDateMenuItem(
-                menu.findItem(R.id.action_share_expiration_date),
-                publicShare.getExpirationDate(),
-                res
-        );
+                                                publicShare.isHideFileDownload(),
+                                                capabilities);
+
+        SharingMenuHelper.setupPasswordMenuItem(menu.findItem(R.id.action_password),
+                                                publicShare.isPasswordProtected());
+
+        SharingMenuHelper.setupExpirationDateMenuItem(menu.findItem(R.id.action_share_expiration_date),
+                                                      publicShare.getExpirationDate(),
+                                                      res);
 
         menu.findItem(R.id.action_share_send_note).setVisible(capabilities.getVersion().isNoteOnShareSupported());
+
+        if (publicShare.getPermissions() > 17) {
+            menu.findItem(R.id.action_allow_editing).setChecked(true);
+        } else {
+            menu.findItem(R.id.action_allow_editing).setChecked(false);
+        }
     }
 
-    private boolean optionsItemSelected(MenuItem item) {
+    public boolean optionsItemSelected(MenuItem item, OCShare publicShare) {
         switch (item.getItemId()) {
+            case R.id.action_allow_editing:
+                if (file.isSharedViaLink()) {
+                    item.setChecked(!item.isChecked());
+                    fileOperationsHelper.setUploadPermissionsToShare(file,
+                                                                     item.isChecked());
+                }
+                return true;
             case R.id.action_hide_file_listing: {
                 item.setChecked(!item.isChecked());
                 if (capabilities.getFilesFileDrop().isTrue()) {
@@ -472,14 +414,12 @@ public class FileDetailSharingFragment extends Fragment implements ShareeListAda
             case R.id.action_share_expiration_date: {
                 ExpirationDatePickerDialogFragment dialog = ExpirationDatePickerDialogFragment
                     .newInstance(file, publicShare.getExpirationDate());
-                dialog.show(
-                    fileActivity.getSupportFragmentManager(),
-                    ExpirationDatePickerDialogFragment.DATE_PICKER_DIALOG
-                           );
+                dialog.show(fileActivity.getSupportFragmentManager(),
+                            ExpirationDatePickerDialogFragment.DATE_PICKER_DIALOG);
                 return true;
             }
             case R.id.action_share_send_link: {
-                if(shareByLink.isChecked() && file.isSharedViaLink() && !TextUtils.isEmpty(file.getPublicLink())) {
+                if (file.isSharedViaLink() && !TextUtils.isEmpty(file.getPublicLink())) {
                     FileDisplayActivity.showShareLinkDialog(fileActivity, file, file.getPublicLink());
                 } else {
                     showSendLinkTo();
@@ -490,6 +430,11 @@ public class FileDetailSharingFragment extends Fragment implements ShareeListAda
                 NoteDialogFragment dialog = NoteDialogFragment.newInstance(publicShare);
                 dialog.show(fileActivity.getSupportFragmentManager(), NoteDialogFragment.NOTE_FRAGMENT);
                 return true;
+            case R.id.action_add_another_public_share_link:
+                createShareLink();
+                return true;
+            case R.id.action_unshare:
+                fileOperationsHelper.unshareShare(file, publicShare);
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -535,30 +480,29 @@ public class FileDetailSharingFragment extends Fragment implements ShareeListAda
      * Get {@link OCShare} instance from DB and updates the UI.
      */
     private void refreshUiFromDB() {
-        if (publicShare != null) {
-            // Get edited shared by link
-            publicShare = fileDataStorageManager.getShareById(publicShare.getId());
-        }
-
         // Updates UI with new state
         setupView();
     }
 
     @Override
     public void unshareWith(OCShare share) {
-        fileOperationsHelper.unshareFileWithUserOrGroup(file, share.getShareType(), share.getShareWith());
+        fileOperationsHelper.unshareShare(file, share);
     }
 
     @Override
-    public int updatePermissionsToShare(OCShare share, boolean canReshare, boolean canEdit, boolean canEditCreate,
-                                        boolean canEditChange, boolean canEditDelete) {
+    public int updatePermissionsToShare(OCShare share,
+                                        boolean canReshare,
+                                        boolean canEdit,
+                                        boolean canEditCreate,
+                                        boolean canEditChange,
+                                        boolean canEditDelete) {
         SharePermissionsBuilder spb = new SharePermissionsBuilder();
         spb.setSharePermission(canReshare);
 
         if (file.isFolder()) {
             spb.setUpdatePermission(canEditChange)
-                    .setCreatePermission(canEditCreate)
-                    .setDeletePermission(canEditDelete);
+                .setCreatePermission(canEditCreate)
+                .setDeletePermission(canEditDelete);
         } else {
             spb.setUpdatePermission(canEdit);
         }
@@ -608,34 +552,32 @@ public class FileDetailSharingFragment extends Fragment implements ShareeListAda
      */
     public void refreshPublicShareFromDB() {
         if (FileDetailSharingFragmentHelper.isPublicShareDisabled(capabilities) || !file.canReshare()) {
-            shareByLinkContainer.setVisibility(View.GONE);
-        } else {
-            // Get public share
-            publicShare = fileDataStorageManager.getFirstShareByPathAndType(file.getRemotePath(),
-                                                                            ShareType.PUBLIC_LINK, "");
-
-            // Update public share section
-            updatePublicShareSection();
+            publicShareList.setVisibility(View.GONE);
+            return;
         }
-    }
 
-    /**
-     * Updates in the UI the section about public share with the information
-     * in the current public share bound to, if any.
-     */
-    private void updatePublicShareSection() {
-        if (publicShare != null && ShareType.PUBLIC_LINK.equals(publicShare.getShareType())) {
-            shareByLink.setChecked(true);
+        // Get public share
+        List<OCShare> shares = fileDataStorageManager.getSharesByPathAndType(file.getRemotePath(),
+                                                                             ShareType.PUBLIC_LINK,
+                                                                             "");
 
-            if (publicShare.getPermissions() > OCShare.READ_PERMISSION_FLAG) {
-                shareByLinkAllowEditing.setChecked(true);
-            } else {
-                shareByLinkAllowEditing.setChecked(false);
-            }
-
-            setShareByLinkInfo(true);
+        if (shares.isEmpty()) {
+            addPublicShare.setVisibility(View.VISIBLE);
+            publicShareList.setVisibility(View.GONE);
+            ImageView icon = requireView().findViewById(R.id.copy_internal_link_icon);
+            icon.getBackground().setColorFilter(requireContext()
+                                                    .getResources()
+                                                    .getColor(R.color.primary_button_background_color),
+                                                PorterDuff.Mode.SRC_IN);
+            icon.getDrawable().mutate().setColorFilter(requireContext().getResources().getColor(R.color.black),
+                                                       PorterDuff.Mode.SRC_IN);
+            requireView().findViewById(R.id.add_new_public_share_link).setOnClickListener(v -> createShareLink());
         } else {
-            setShareByLinkInfo(false);
+            addPublicShare.setVisibility(View.GONE);
+            publicShareList.setVisibility(View.VISIBLE);
+            publicShareList.setAdapter(new PublicShareListAdapter(getContext(), shares, this));
+            publicShareList.setLayoutManager(new LinearLayoutManager(getContext()));
+            publicShareList.addItemDecoration(new SimpleListItemDividerDecoration(getContext()));
         }
     }
 

@@ -550,7 +550,8 @@ public class OperationsService extends Service {
                         shareId = operationIntent.getLongExtra(EXTRA_SHARE_ID, -1);
 
                         if (!TextUtils.isEmpty(remotePath)) {
-                            UpdateShareViaLinkOperation updateLinkOperation = new UpdateShareViaLinkOperation(remotePath);
+                            UpdateShareViaLinkOperation updateLinkOperation =
+                                new UpdateShareViaLinkOperation(remotePath, shareId);
 
                             password = operationIntent.getStringExtra(EXTRA_SHARE_PASSWORD);
                             updateLinkOperation.setPassword(password);
@@ -559,7 +560,7 @@ public class OperationsService extends Service {
                             updateLinkOperation.setExpirationDateInMillis(expirationDate);
 
                             boolean hideFileDownload = operationIntent.getBooleanExtra(EXTRA_SHARE_HIDE_FILE_DOWNLOAD,
-                                false);
+                                                                                       false);
                             updateLinkOperation.setHideFileDownload(hideFileDownload);
 
                             if (operationIntent.hasExtra(EXTRA_SHARE_PUBLIC_UPLOAD)) {
@@ -605,17 +606,16 @@ public class OperationsService extends Service {
                         int permissions = operationIntent.getIntExtra(EXTRA_SHARE_PERMISSIONS, -1);
                         if (!TextUtils.isEmpty(remotePath)) {
                             operation = new CreateShareWithShareeOperation(remotePath, shareeName, shareType,
-                                    permissions);
+                                                                           permissions);
                         }
                         break;
 
                     case ACTION_UNSHARE:
                         remotePath = operationIntent.getStringExtra(EXTRA_REMOTE_PATH);
-                        shareType = (ShareType) operationIntent.getSerializableExtra(EXTRA_SHARE_TYPE);
-                        String shareWith = operationIntent.getStringExtra(EXTRA_SHARE_WITH);
+                        shareId = operationIntent.getLongExtra(EXTRA_SHARE_ID, -1);
 
-                        if (!TextUtils.isEmpty(remotePath)) {
-                            operation = new UnshareOperation(remotePath, shareType, shareWith, this);
+                        if (shareId > 0) {
+                            operation = new UnshareOperation(remotePath, shareId);
                         }
                         break;
 
