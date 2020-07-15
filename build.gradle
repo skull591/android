@@ -27,6 +27,7 @@ apply plugin: 'checkstyle'
 apply plugin: 'pmd'
 apply plugin: 'findbugs'
 apply plugin: 'jacoco-android'
+apply plugin: 'jacoco'
 
 configurations.all {
     exclude group: 'com.google.firebase', module: 'firebase-core'
