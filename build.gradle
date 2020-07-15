@@ -40,6 +40,7 @@ apply plugin: 'pmd'
 apply plugin: 'jacoco-android'
 apply plugin: "com.github.spotbugs"
 apply plugin: "io.gitlab.arturbosch.detekt"
+apply plugin: 'jacoco'
 
 configurations {
     ktlint
