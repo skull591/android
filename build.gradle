@@ -23,7 +23,12 @@ apply plugin: 'com.android.application'
 apply plugin: 'checkstyle'
 apply plugin: 'pmd'
 apply plugin: 'findbugs'
+apply plugin: 'jacoco'
 
+
+jacoco {
+    toolVersion = "0.8.5"
+}
 configurations.all {
     // check for updates every build
     resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
@@ -120,6 +125,11 @@ android {
         }
     }
 
+    buildTypes {
+        debug {
+            testCoverageEnabled true
+        }
+    }
 
     // adapt structure from Eclipse to Gradle/Android Studio expectations;
     // see http://tools.android.com/tech-docs/new-build-system/user-guide#TOC-Configuring-the-Structure
